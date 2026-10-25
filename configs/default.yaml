@@ -1,0 +1,102 @@
+# tsquant default configuration.
+# Everything under signals/combination/risk/optimizer/costs/backtest is a
+# "model parameter": changing it requires `tsquant approve` (see governance.py).
+
+data:
+  start: "2010-01-01"
+  end: "2025-12-31"
+  cache_dir: data/cache
+  min_history_days: 504
+  # Liquid US large caps across sectors. Hand-picked today => survivorship bias.
+  # For a cleaner study, build a point-in-time universe (e.g. from 13F filings
+  # or historical index membership) — see docs/WORKFLOW.md.
+  universe: [AAPL, MSFT, AMZN, GOOGL, META, NVDA, ORCL, CSCO, INTC, IBM, ADBE, CRM, QCOM, TXN,
+             JPM, BAC, WFC, C, GS, MS, AXP, BLK, USB, PNC,
+             JNJ, PFE, MRK, ABT, UNH, LLY, BMY, AMGN, MDT, TMO,
+             XOM, CVX, COP, SLB, EOG,
+             PG, KO, PEP, WMT, COST, MCD, NKE, HD, LOW, SBUX, TGT,
+             GE, CAT, HON, MMM, UPS, BA, LMT, DE, UNP,
+             T, VZ, CMCSA, DIS, NEE, DUK, SO, AMT, SPG, LIN, APD]
+
+synthetic:
+  n_stocks: 80
+  n_days: 2520
+  seed: 7
+
+signals:
+  names: [momentum_12_1, resid_momentum, reversal_5d, low_vol, low_beta]
+
+combination:
+  # 0 = raw signal, 1 = fully orthogonal to the signals listed before it.
+  # Our analogue of the "decorrelation parameters" in the SEC order.
+  decorrelation_strength: {resid_momentum: 1.0, reversal_5d: 0.0, low_vol: 0.5, low_beta: 1.0}
+  ic_horizon: 5
+  ic_lookback: 252
+  shrink_to_equal: 0.5
+  target_ic: 0.03
+
+risk:
+  style_factors: [momentum_12_1, low_vol, reversal_5d]
+  halflife_factor: 90
+  halflife_specific: 60
+  window: 504
+
+optimizer:
+  target_vol_annual: 0.10
+  max_weight: 0.05
+  max_gross: 3.0
+  risk_aversion: 1.0
+  trade_rate: 0.5
+  neutralize: [market, beta]
+
+costs:
+  half_spread_bps: 2.0
+  impact_coef: 0.1
+  borrow_bps_annual: 50
+
+backtest:
+  rebalance_every: 5
+  nav_usd: 100000000
+  extra_warmup_days: 0
+  snapshot_every_rebalances: 26
+
+factor_lens:
+  window_days: 756
+  halflife_days: 252
+  refit_every: 21
+  instruments:
+    equity: ACWI
+    rates: IEF
+    credit: [LQD, HYG]
+    commodities: DBC
+    fx: UDN          # long G10 FX vs USD (Invesco DB US Dollar Bearish)
+    emerging: [EEM, ACWI]
+    short_vol: PUTW  # WisdomTree CBOE S&P 500 PutWrite (starts 2016)
+    inflation: [TIP, IEF]
+
+stress:
+  historical:
+    quant_quake_2007: ["2007-08-06", "2007-08-10"]
+    gfc_2008: ["2008-09-01", "2009-03-09"]
+    momentum_crash_2009: ["2009-03-09", "2009-05-29"]
+    covid_2020: ["2020-02-19", "2020-03-23"]
+    rates_2022: ["2022-01-03", "2022-10-12"]
+  # Hypothetical shocks to style-factor returns (per unit z-score exposure).
+  factor_shocks:
+    momentum_crash: {momentum_12_1: -0.04}
+    low_vol_unwind: {low_vol: -0.03, beta: 0.02}
+    market_down_10: {market: -0.10, beta: -0.03}
+
+governance:
+  # PAM-style gate: a signal more correlated than this with any signal listed
+  # before it is dropped from the combination when enforce_admission is true.
+  max_abs_corr: 0.5
+  enforce_admission: true
+  lock_file: configs/params.lock.json
+  change_log: configs/param_changes.jsonl
+
+evaluation:
+  # How many configurations you have tried; drives the Deflated Sharpe Ratio.
+  n_trials: 20
+
+output_dir: outputs
