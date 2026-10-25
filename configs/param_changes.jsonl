@@ -1,0 +1,1 @@
+{"time": "2026-10-25T12:14:51.243243+00:00", "approver": "initial-setup", "reason": "initial parameter set (generated with the project; review before real use)", "old_hash": null, "new_hash": "84438b456a81c0391c2c83d590364db995fac1582a3d1a30382a0e33f7f43e24", "changed": ["backtest", "combination", "costs", "optimizer", "risk", "signals"]}
